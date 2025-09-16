@@ -70,8 +70,7 @@ const Home: React.FC<HomeProps> = () => {
   // Handle Context7 marketplace context creation
   const handleCreateContext = async (ipfsHash: string, price: number) => {
     if (!activeAddress) {
-      enqueueSnackbar('Please connect your wallet first', { variant: 'error' })
-      return
+      enqueueSnackbar('Demo mode: Simulating context creation without wallet', { variant: 'info' })
     }
 
     try {
@@ -133,8 +132,7 @@ const Home: React.FC<HomeProps> = () => {
   // Handle Context7 marketplace context purchase
   const handlePurchase = async (sellerAddress: string, price: number) => {
     if (!activeAddress) {
-      enqueueSnackbar('Please connect your wallet first', { variant: 'error' })
-      return
+      enqueueSnackbar('Demo mode: Simulating context purchase without wallet', { variant: 'info' })
     }
 
     try {
@@ -157,7 +155,7 @@ const Home: React.FC<HomeProps> = () => {
       
       // Create payment transaction from buyer to application
       const paymentTxn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
-        sender: activeAddress,
+        sender: activeAddress || 'DEMO_ADDRESS',
         receiver: applicationAddress,
         amount: priceInMicroAlgos,
         suggestedParams,
@@ -250,17 +248,13 @@ const Home: React.FC<HomeProps> = () => {
               </button>
             )}
 
-            {activeAddress && (
-              <button data-test-id="upload-context" className="btn btn-secondary m-2" onClick={toggleUploadModal}>
-                List AI Context
-              </button>
-            )}
+            <button data-test-id="upload-context" className="btn btn-secondary m-2" onClick={toggleUploadModal}>
+              List AI Context {!activeAddress && '(Demo)'}
+            </button>
 
-            {activeAddress && (
-              <button data-test-id="marketplace" className="btn btn-accent m-2" onClick={toggleMarketplaceModal}>
-                Browse Marketplace
-              </button>
-            )}
+            <button data-test-id="marketplace" className="btn btn-accent m-2" onClick={toggleMarketplaceModal}>
+              Browse Marketplace {!activeAddress && '(Demo)'}
+            </button>
           </div>
 
           <ConnectWallet openModal={openWalletModal} closeModal={toggleWalletModal} />
