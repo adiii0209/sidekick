@@ -1,7 +1,7 @@
 import { useWallet } from '@txnlab/use-wallet-react'
 import { useSnackbar } from 'notistack'
 import { useState } from 'react'
-// import { SidekickFactory } from '../contracts/Sidekick' // Commented out - contract not generated yet
+import { Context7MarketplaceFactory } from '../contracts/Context7Marketplace'
 import { OnSchemaBreak, OnUpdate } from '@algorandfoundation/algokit-utils/types/app'
 import { getAlgodConfigFromViteEnvironment, getIndexerConfigFromViteEnvironment } from '../utils/network/getAlgoClientConfigs'
 import { AlgorandClient } from '@algorandfoundation/algokit-utils'
@@ -27,47 +27,62 @@ const AppCalls = ({ openModal, setModalState }: AppCallsInterface) => {
 
   const sendAppCall = async () => {
     setLoading(true)
+    if (activeAddress) {
+      try {
+        const factory = new Context7MarketplaceFactory({
+          defaultSender: activeAddress,
+          algorand,
+        })
 
-    try {
-      // Placeholder implementation since contract client is not generated yet
-      enqueueSnackbar(`Demo: Would call contract with input: ${contractInput}`, { variant: 'info' })
-      
-      // Simulate contract interaction
-      setTimeout(() => {
-        enqueueSnackbar(`Demo response: Hello, ${contractInput}!`, { variant: 'success' })
-        setLoading(false)
-      }, 1000)
-      
-    } catch (error) {
-      enqueueSnackbar(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`, { variant: 'error' })
-      setLoading(false)
+        const { result, appClient } = await factory.deploy({
+          createParams: {},
+          deployTimeParams: {},
+          onUpdate: 'update' as any,
+        })
+
+        console.log('Deployment result:', result)
+        enqueueSnackbar(`Context7 Marketplace deployed with ID: ${result.appId}`, { variant: 'success' })
+        enqueueSnackbar(`Contract Address: ${appClient.appAddress}`, { variant: 'info' })
+      } catch (e) {
+        enqueueSnackbar('Failed to deploy marketplace', { variant: 'error' })
+        console.error(e)
+      }
     }
+    setLoading(false)
   }
 
   return (
-    <dialog id="appcalls_modal" className={`modal ${openModal ? 'modal-open' : ''} bg-slate-200`}>
-      <form method="dialog" className="modal-box">
-        <h3 className="font-bold text-lg">Say hello to your Algorand smart contract</h3>
-        <br />
-        <input
-          type="text"
-          placeholder="Provide input to hello function"
-          className="input input-bordered w-full"
-          value={contractInput}
-          onChange={(e) => {
-            setContractInput(e.target.value)
-          }}
-        />
-        <div className="modal-action ">
-          <button className="btn" onClick={() => setModalState(!openModal)}>
-            Close
+    <div className={`arcade-modal ${openModal ? 'modal-open' : ''} ${openModal ? 'modal-visible' : 'modal-hidden'}`}>
+      <div className="arcade-modal-content pixel-border">
+        <h3 className="arcade-modal-title">DEPLOY CONTRACT</h3>
+        
+        <div className="deploy-info">
+          <div className="terminal-text">
+            {'>'}  INITIALIZING CONTEXT7 MARKETPLACE...
+          </div>
+          <div className="deploy-description">
+            Deploy the Context7 Marketplace smart contract to Algorand TestNet. 
+            This will create a new contract instance for your AI marketplace.
+          </div>
+        </div>
+        
+        <div className="arcade-modal-actions">
+          <button 
+            className="arcade-button close-button neon-glow" 
+            onClick={() => setModalState(!openModal)}
+          >
+            CANCEL
           </button>
-          <button className={`btn`} onClick={sendAppCall}>
-            {loading ? <span className="loading loading-spinner" /> : 'Send application call'}
+          <button 
+            className={`arcade-button deploy-button neon-glow ${loading ? 'loading' : ''}`} 
+            onClick={sendAppCall}
+            disabled={loading}
+          >
+            {loading ? 'DEPLOYING...' : 'DEPLOY CONTRACT'}
           </button>
         </div>
-      </form>
-    </dialog>
+      </div>
+    </div>
   )
 }
 

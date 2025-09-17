@@ -12,15 +12,15 @@ const ConnectWallet = ({ openModal, closeModal }: ConnectWalletInterface) => {
   const isKmd = (wallet: Wallet) => wallet.id === WalletId.KMD
 
   return (
-    <dialog id="connect_wallet_modal" className={`modal ${openModal ? 'modal-open' : ''}`}style={{ display: openModal ? 'block' : 'none' }}>
-      <form method="dialog" className="modal-box">
-        <h3 className="font-bold text-2xl">Select wallet provider</h3>
+    <div className={`arcade-modal ${openModal ? 'modal-open' : ''}`} style={{ display: openModal ? 'flex' : 'none' }}>
+      <div className="arcade-modal-content pixel-border">
+        <h3 className="arcade-modal-title">SELECT WALLET PROVIDER</h3>
 
-        <div className="grid m-2 pt-5">
+        <div className="wallet-grid">
           {activeAddress && (
             <>
               <Account />
-              <div className="divider" />
+              <div className="arcade-divider" />
             </>
           )}
 
@@ -28,37 +28,39 @@ const ConnectWallet = ({ openModal, closeModal }: ConnectWalletInterface) => {
             wallets?.map((wallet) => (
               <button
                 data-test-id={`${wallet.id}-connect`}
-                className="btn border-teal-800 border-1  m-2"
+                className="wallet-button pixel-border neon-glow"
                 key={`provider-${wallet.id}`}
                 onClick={() => {
                   return wallet.connect()
                 }}
               >
                 {!isKmd(wallet) && (
-                  <img
-                    alt={`wallet_icon_${wallet.id}`}
-                    src={wallet.metadata.icon}
-                    style={{ objectFit: 'contain', width: '30px', height: 'auto' }}
-                  />
+                  <div className="wallet-icon">
+                    <img
+                      alt={`wallet_icon_${wallet.id}`}
+                      src={wallet.metadata.icon}
+                      className="wallet-logo"
+                    />
+                  </div>
                 )}
-                <span>{isKmd(wallet) ? 'LocalNet Wallet' : wallet.metadata.name}</span>
+                <span className="wallet-name">{isKmd(wallet) ? 'LocalNet Wallet' : wallet.metadata.name}</span>
               </button>
             ))}
         </div>
 
-        <div className="modal-action grid">
+        <div className="arcade-modal-actions">
           <button
             data-test-id="close-wallet-modal"
-            className="btn"
+            className="arcade-button close-button neon-glow"
             onClick={() => {
               closeModal()
             }}
           >
-            Close
+            CLOSE
           </button>
           {activeAddress && (
             <button
-              className="btn btn-warning"
+              className="arcade-button logout-button neon-glow"
               data-test-id="logout"
               onClick={async () => {
                 if (wallets) {
@@ -75,12 +77,12 @@ const ConnectWallet = ({ openModal, closeModal }: ConnectWalletInterface) => {
                 }
               }}
             >
-              Logout
+              LOGOUT
             </button>
           )}
         </div>
-      </form>
-    </dialog>
+      </div>
+    </div>
   )
 }
 export default ConnectWallet

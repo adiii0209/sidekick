@@ -1,5 +1,6 @@
 import { SupportedWallet, WalletId, WalletManager, WalletProvider } from '@txnlab/use-wallet-react'
 import { SnackbarProvider } from 'notistack'
+import { useState } from 'react'
 import Home from './Home'
 import { getAlgodConfigFromViteEnvironment, getKmdConfigFromViteEnvironment } from './utils/network/getAlgoClientConfigs'
 
@@ -28,6 +29,8 @@ if (import.meta.env.VITE_ALGOD_NETWORK === 'localnet') {
 
 export default function App() {
   const algodConfig = getAlgodConfigFromViteEnvironment()
+  const [openWalletModal, setOpenWalletModal] = useState(false)
+  const [isConnected, setIsConnected] = useState(false)
 
   const walletManager = new WalletManager({
     wallets: supportedWallets,
@@ -49,7 +52,12 @@ export default function App() {
   return (
     <SnackbarProvider maxSnack={3}>
       <WalletProvider manager={walletManager}>
-        <Home />
+        <Home 
+          openWalletModal={openWalletModal}
+          setOpenWalletModal={setOpenWalletModal}
+          openDemoModal={() => {}}
+          setIsConnected={setIsConnected}
+        />
       </WalletProvider>
     </SnackbarProvider>
   )

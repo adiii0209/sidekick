@@ -1,67 +1,69 @@
-# contracts/context_marketplace.py
-from beaker import *
-from pyteal import *
+from algopy import *
 
-# Platform and developer fee addresses
-PLATFORM_FEE_ADDRESS = Addr("REPLACE_WITH_YOUR_PLATFORM_TESTNET_ADDRESS")
-DEVELOPER_FEE_ADDRESS = Addr("REPLACE_WITH_YOUR_DEVELOPER_TESTNET_ADDRESS")
 
-class AppState:
-    # State for each user who lists a context
-    ipfs_hash = LocalStateValue(TealType.bytes)
-    price = LocalStateValue(TealType.uint64)
-    seller = LocalStateValue(TealType.bytes)
-
-app = Application("Context7Marketplace", state=AppState())
-
-@app.create
-def create():
-    return Approve()
-
-@app.opt_in
-def create_context(ipfs_cid: abi.String, price: abi.Uint64):
-    # A user opts-in to the contract to list a new context
-    return Seq(
-        Assert(price.get() > Int(0)), # Ensure price is not zero
-        app.state.ipfs_hash[Txn.sender()].set(ipfs_cid.get()),
-        app.state.price[Txn.sender()].set(price.get()),
-        app.state.seller[Txn.sender()].set(Txn.sender()),
-        Approve(),
-    )
-
-@app.external
-def purchase_context(payment: abi.PaymentTransaction, seller: abi.Account):
-    price = app.state.price[seller.address()]
+class Context7Marketplace(ARC4Contract):
+    """Context7 AI Marketplace Smart Contract"""
     
-    # Calculate fees (90/5/5 split)
-    platform_fee = (price * Int(5)) / Int(100)
-    developer_fee = (price * Int(5)) / Int(100)
-    seller_proceeds = price - platform_fee - developer_fee
+    def __init__(self) -> None:
+        # Local state schema
+        self.ipfs_hash = LocalState(Bytes)
+        self.price = LocalState(UInt64)
+        self.seller = LocalState(Account)
     
-    return Seq(
-        # Verify the payment transaction
-        Assert(payment.get().receiver() == Global.current_application_address()),
-        Assert(payment.get().amount() == price),
-        Assert(payment.get().sender() == Txn.sender()),
+    @arc4.baremethod(allow_actions=["OptIn"])
+    def opt_in(self) -> None:
+        """Allow users to opt into the marketplace"""
+        return
+    
+    @arc4.abimethod
+    def create_context(self, ipfs_hash: arc4.String, price: arc4.UInt64) -> None:
+        """List a new AI context for sale"""
+        # Ensure price is greater than 0
+        assert price.native > 0, "Price must be greater than 0"
         
-        # Send funds using Inner Transactions
-        InnerTxnBuilder.Execute({
-            TxnField.type_enum: TxnType.Payment,
-            TxnField.receiver: seller.address(),
-            TxnField.amount: seller_proceeds,
-            TxnField.fee: Int(0),
-        }),
-        InnerTxnBuilder.Execute({
-            TxnField.type_enum: TxnType.Payment,
-            TxnField.receiver: PLATFORM_FEE_ADDRESS,
-            TxnField.amount: platform_fee,
-            TxnField.fee: Int(0),
-        }),
-        InnerTxnBuilder.Execute({
-            TxnField.type_enum: TxnType.Payment,
-            TxnField.receiver: DEVELOPER_FEE_ADDRESS,
-            TxnField.amount: developer_fee,
-            TxnField.fee: Int(0),
-        }),
-        Approve(),
-    )
+        # Store context info in local state
+        self.ipfs_hash[Txn.sender] = ipfs_hash.native.bytes
+        self.price[Txn.sender] = price.native
+        self.seller[Txn.sender] = Txn.sender
+    
+    @arc4.abimethod
+    def purchase_context(self, seller: Account, payment: gtxn.PaymentTransaction) -> arc4.String:
+        """Purchase an AI context"""
+        # Platform and developer fee addresses (TestNet)
+        platform_fee_address = Account("7ZUECA7HFLZTXENRV24SHLU4AVPUTMTTDUFUBNBD64C73F3UHRTHAIOF6Q")
+        developer_fee_address = Account("GD64YIY3TWGDMCNPP553DZPPR6LDUSFQOIJVFDPPXWEG3FVOJCCDBBHU5A")
+        
+        # Get the price from seller's local state
+        price = self.price[seller]
+        
+        # Verify payment transaction
+        assert payment.receiver == Global.current_application_address
+        assert payment.amount == price
+        assert payment.sender == Txn.sender
+        
+        # Calculate fees (90% seller, 5% platform, 5% developer)
+        platform_fee = price * 5 // 100
+        developer_fee = price * 5 // 100
+        seller_proceeds = price - platform_fee - developer_fee
+        
+        # Send payments via inner transactions
+        itxn.Payment(
+            receiver=seller,
+            amount=seller_proceeds,
+            fee=0,
+        ).submit()
+        
+        itxn.Payment(
+            receiver=platform_fee_address,
+            amount=platform_fee,
+            fee=0,
+        ).submit()
+        
+        itxn.Payment(
+            receiver=developer_fee_address,
+            amount=developer_fee,
+            fee=0,
+        ).submit()
+        
+        # Return the IPFS hash to the buyer
+        return arc4.String.from_bytes(self.ipfs_hash[seller])

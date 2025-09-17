@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Context7 - Retro AI Marketplace</title>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Press Start 2P', monospace;
+            background: linear-gradient(135deg, #1a0033 0%, #2d1b69 50%, #0f0f23 100%);
+            color: #00ff41;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Pixel art styling */
+        .pixel-border {
+            border: 4px solid;
+            border-image: linear-gradient(45deg, #ff00ff, #00ffff) 1;
+            image-rendering: pixelated;
+        }
+
+        .neon-glow {
+            box-shadow: 
+                0 0 10px currentColor,
+                0 0 20px currentColor,
+                0 0 30px currentColor;
+        }
+
+        /* Header */
+        .header {
+            background: #0a0a0a;
+            border-bottom: 4px solid #ff00ff;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: relative;
+        }
+
+        .logo {
+            font-size: 24px;
+            color: #ff00ff;
+            text-shadow: 0 0 20px #ff00ff;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        .connect-wallet {
+            background: linear-gradient(45deg, #00ffff, #ff00ff);
+            border: none;
+            padding: 15px 30px;
+            font-family: 'Press Start 2P', monospace;
+            font-size: 12px;
+            color: #000;
+            cursor: pointer;
+            image-rendering: pixelated;
+            transition: all 0.3s;
+        }
+
+        .connect-wallet:hover {
+            transform: scale(1.1);
+            box-shadow: 0 0 30px #00ffff;
+        }
+
+        /* Main Marketplace Grid */
+        .marketplace {
+            padding: 40px 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .section-title {
+            font-size: 18px;
+            color: #00ffff;
+            text-align: center;
+            margin-bottom: 40px;
+            text-shadow: 0 0 15px #00ffff;
+        }
+
+        .cartridges-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 30px;
+            margin-bottom: 60px;
+        }
+
+        .cartridge {
+            background: #1a1a2e;
+            border: 3px solid #00ff41;
+            padding: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+            image-rendering: pixelated;
+        }
+
+        .cartridge:hover {
+            border-color: #ff00ff;
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(255, 0, 255, 0.3);
+        }
+
+        .cartridge-art {
+            width: 100%;
+            height: 120px;
+            background: linear-gradient(45deg, #ff00ff, #00ffff, #00ff41);
+            margin-bottom: 15px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .cartridge-art::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                repeating-linear-gradient(
+                    0deg,
+                    transparent,
+                    transparent 2px,
+                    rgba(0,0,0,0.1) 2px,
+                    rgba(0,0,0,0.1) 4px
+                ),
+                repeating-linear-gradient(
+                    90deg,
+                    transparent,
+                    transparent 2px,
+                    rgba(0,0,0,0.1) 2px,
+                    rgba(0,0,0,0.1) 4px
+                );
+        }
+
+        .developer-avatar {
+            width: 40px;
+            height: 40px;
+            background: #ff00ff;
+            border: 2px solid #00ffff;
+            display: inline-block;
+            margin-right: 10px;
+            image-rendering: pixelated;
+        }
+
+        .cartridge-info {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .cartridge-name {
+            font-size: 12px;
+            color: #00ffff;
+            margin-bottom: 10px;
+        }
+
+        .cartridge-price {
+            font-size: 14px;
+            color: #00ff41;
+            text-align: right;
+        }
+
+        /* Purchase Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: #0f0f23;
+            border: 4px solid #ff00ff;
+            padding: 40px;
+            max-width: 600px;
+            width: 90%;
+            position: relative;
+        }
+
+        .modal-art {
+            width: 100%;
+            height: 200px;
+            background: linear-gradient(45deg, #ff00ff, #00ffff);
+            margin-bottom: 20px;
+            position: relative;
+        }
+
+        .terminal-description {
+            background: #000;
+            border: 2px solid #00ff41;
+            padding: 20px;
+            margin: 20px 0;
+            font-size: 10px;
+            color: #00ff41;
+            font-family: monospace;
+            line-height: 1.6;
+        }
+
+        .terminal-description::before {
+            content: '> ';
+            color: #ff00ff;
+        }
+
+        .insert-coin-btn {
+            width: 100%;
+            background: linear-gradient(45deg, #ff00ff, #00ffff);
+            border: none;
+            padding: 20px;
+            font-family: 'Press Start 2P', monospace;
+            font-size: 16px;
+            color: #000;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: all 0.3s;
+        }
+
+        .insert-coin-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 40px #ff00ff;
+        }
+
+        .close-modal {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            background: none;
+            border: none;
+            color: #ff00ff;
+            font-size: 20px;
+            cursor: pointer;
+        }
+
+        /* Developer Workshop */
+        .workshop {
+            display: none;
+            padding: 40px 20px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .workshop.active {
+            display: block;
+        }
+
+        .workshop-form {
+            background: #1a1a2e;
+            border: 3px solid #00ffff;
+            padding: 30px;
+            margin-bottom: 40px;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        .form-label {
+            display: block;
+            color: #00ffff;
+            font-size: 12px;
+            margin-bottom: 10px;
+        }
+
+        .form-input {
+            width: 100%;
+            background: #000;
+            border: 2px solid #00ff41;
+            color: #00ff41;
+            padding: 15px;
+            font-family: monospace;
+            font-size: 14px;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #ff00ff;
+            box-shadow: 0 0 15px rgba(255, 0, 255, 0.5);
+        }
+
+        .ship-it-btn {
+            width: 100%;
+            background: linear-gradient(45deg, #00ff41, #00ffff);
+            border: none;
+            padding: 25px;
+            font-family: 'Press Start 2P', monospace;
+            font-size: 18px;
+            color: #000;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 20px;
+        }
+
+        .ship-it-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 40px #00ff41;
+        }
+
+        .my-cartridges {
+            background: #1a1a2e;
+            border: 3px solid #ff00ff;
+            padding: 20px;
+        }
+
+        .nav-tabs {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 40px;
+        }
+
+        .nav-tab {
+            background: #1a1a2e;
+            border: 2px solid #00ffff;
+            padding: 15px 30px;
+            margin: 0 10px;
+            font-family: 'Press Start 2P', monospace;
+            font-size: 10px;
+            color: #00ffff;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .nav-tab.active {
+            background: #00ffff;
+            color: #000;
+        }
+
+        .nav-tab:hover {
+            box-shadow: 0 0 15px #00ffff;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .logo {
+                font-size: 18px;
+            }
+            
+            .cartridges-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .modal-content {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="logo">CONTEXT7</div>
+        <button class="connect-wallet neon-glow">CONNECT WALLET</button>
+    </header>
+
+    <!-- Navigation Tabs -->
+    <div class="nav-tabs">
+        <button class="nav-tab active" onclick="showMarketplace()">MARKETPLACE</button>
+        <button class="nav-tab" onclick="showWorkshop()">DEVELOPER WORKSHOP</button>
+    </div>
+
+    <!-- Main Marketplace View -->
+    <main class="marketplace" id="marketplace">
+        <h1 class="section-title">AI CARTRIDGES ARCADE</h1>
+        
+        <div class="cartridges-grid">
+            <!-- AI Cartridge 1 -->
+            <div class="cartridge pixel-border" onclick="openModal('Neural Network Assistant', 'Advanced AI context for neural network development and optimization. Includes pre-trained models and debugging tools.', '15.5')">
+                <div class="cartridge-art" style="background: linear-gradient(45deg, #ff00ff, #00ffff);"></div>
+                <div class="cartridge-info">
+                    <div class="developer-avatar" style="background: linear-gradient(45deg, #ff00ff, #ffff00);"></div>
+                    <span style="color: #00ffff; font-size: 10px;">@ai_wizard</span>
+                </div>
+                <div class="cartridge-name">NEURAL NET ASSISTANT</div>
+                <div class="cartridge-price">15.5 ALGO</div>
+            </div>
+
+            <!-- AI Cartridge 2 -->
+            <div class="cartridge pixel-border" onclick="openModal('Code Optimizer Pro', 'Professional code optimization context with performance analysis and refactoring suggestions for multiple languages.', '22.0')">
+                <div class="cartridge-art" style="background: linear-gradient(45deg, #00ff41, #ff00ff);"></div>
+                <div class="cartridge-info">
+                    <div class="developer-avatar" style="background: linear-gradient(45deg, #00ff41, #00ffff);"></div>
+                    <span style="color: #00ffff; font-size: 10px;">@code_master</span>
+                </div>
+                <div class="cartridge-name">CODE OPTIMIZER PRO</div>
+                <div class="cartridge-price">22.0 ALGO</div>
+            </div>
+
+            <!-- AI Cartridge 3 -->
+            <div class="cartridge pixel-border" onclick="openModal('Blockchain Oracle', 'Specialized AI context for blockchain development, smart contracts, and DeFi protocols with real-time market data.', '35.8')">
+                <div class="cartridge-art" style="background: linear-gradient(45deg, #00ffff, #ffff00);"></div>
+                <div class="cartridge-info">
+                    <div class="developer-avatar" style="background: linear-gradient(45deg, #ff00ff, #00ff41);"></div>
+                    <span style="color: #00ffff; font-size: 10px;">@blockchain_dev</span>
+                </div>
+                <div class="cartridge-name">BLOCKCHAIN ORACLE</div>
+                <div class="cartridge-price">35.8 ALGO</div>
+            </div>
+
+            <!-- AI Cartridge 4 -->
+            <div class="cartridge pixel-border" onclick="openModal('Creative Writer AI', 'Advanced creative writing assistant with storytelling techniques, character development, and plot generation.', '18.2')">
+                <div class="cartridge-art" style="background: linear-gradient(45deg, #ffff00, #ff00ff);"></div>
+                <div class="cartridge-info">
+                    <div class="developer-avatar" style="background: linear-gradient(45deg, #00ffff, #ff00ff);"></div>
+                    <span style="color: #00ffff; font-size: 10px;">@story_crafter</span>
+                </div>
+                <div class="cartridge-name">CREATIVE WRITER AI</div>
+                <div class="cartridge-price">18.2 ALGO</div>
+            </div>
+
+            <!-- AI Cartridge 5 -->
+            <div class="cartridge pixel-border" onclick="openModal('Data Science Guru', 'Comprehensive data science context with machine learning algorithms, statistical analysis, and visualization tools.', '28.7')">
+                <div class="cartridge-art" style="background: linear-gradient(45deg, #00ff41, #00ffff);"></div>
+                <div class="cartridge-info">
+                    <div class="developer-avatar" style="background: linear-gradient(45deg, #ffff00, #00ff41);"></div>
+                    <span style="color: #00ffff; font-size: 10px;">@data_scientist</span>
+                </div>
+                <div class="cartridge-name">DATA SCIENCE GURU</div>
+                <div class="cartridge-price">28.7 ALGO</div>
+            </div>
+
+            <!-- AI Cartridge 6 -->
+            <div class="cartridge pixel-border" onclick="openModal('Game Dev Assistant', 'Specialized AI context for game development with Unity, Unreal Engine, and indie game design patterns.', '19.9')">
+                <div class="cartridge-art" style="background: linear-gradient(45deg, #ff00ff, #00ff41);"></div>
+                <div class="cartridge-info">
+                    <div class="developer-avatar" style="background: linear-gradient(45deg, #00ffff, #ffff00);"></div>
+                    <span style="color: #00ffff; font-size: 10px;">@game_dev</span>
+                </div>
+                <div class="cartridge-name">GAME DEV ASSISTANT</div>
+                <div class="cartridge-price">19.9 ALGO</div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Developer Workshop View -->
+    <div class="workshop" id="workshop">
+        <h1 class="section-title">DEVELOPER WORKSHOP</h1>
+        
+        <div class="workshop-form pixel-border">
+            <h2 style="color: #ff00ff; margin-bottom: 30px; font-size: 16px;">CREATE NEW AI CARTRIDGE</h2>
+            
+            <div class="form-group">
+                <label class="form-label">CARTRIDGE NAME</label>
+                <input type="text" class="form-input" placeholder="Enter your AI context name...">
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">CONTEXT DESCRIPTION</label>
+                <textarea class="form-input" rows="4" placeholder="Describe your AI context capabilities..."></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">IPFS HASH</label>
+                <input type="text" class="form-input" placeholder="QmXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX">
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">PRICE IN ALGO</label>
+                <input type="number" class="form-input" placeholder="0.00" step="0.1">
+            </div>
+            
+            <button class="ship-it-btn neon-glow">SHIP IT!</button>
+        </div>
+        
+        <div class="my-cartridges pixel-border">
+            <h3 style="color: #00ffff; margin-bottom: 20px; font-size: 14px;">MY CARTRIDGES</h3>
+            
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px;">
+                <div class="cartridge" style="margin: 0;">
+                    <div class="cartridge-art" style="height: 80px; background: linear-gradient(45deg, #ff00ff, #00ffff);"></div>
+                    <div class="cartridge-name" style="font-size: 10px;">MY FIRST AI CONTEXT</div>
+                    <div class="cartridge-price" style="font-size: 12px;">12.5 ALGO</div>
+                </div>
+                
+                <div class="cartridge" style="margin: 0;">
+                    <div class="cartridge-art" style="height: 80px; background: linear-gradient(45deg, #00ff41, #ffff00);"></div>
+                    <div class="cartridge-name" style="font-size: 10px;">ADVANCED ML HELPER</div>
+                    <div class="cartridge-price" style="font-size: 12px;">25.0 ALGO</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Purchase Modal -->
+    <div class="modal" id="purchaseModal">
+        <div class="modal-content pixel-border">
+            <button class="close-modal" onclick="closeModal()">&times;</button>
+            
+            <div class="modal-art" id="modalArt"></div>
+            
+            <h2 id="modalTitle" style="color: #ff00ff; margin-bottom: 20px; font-size: 16px;"></h2>
+            
+            <div class="terminal-description" id="modalDescription">
+                Loading context description...
+            </div>
+            
+            <div style="display: flex; justify-content: space-between; align-items: center; margin: 20px 0;">
+                <span style="color: #00ffff; font-size: 12px;">DEVELOPER: @ai_wizard</span>
+                <span id="modalPrice" style="color: #00ff41; font-size: 16px;">0.0 ALGO</span>
+            </div>
+            
+            <button class="insert-coin-btn neon-glow">INSERT COIN</button>
+        </div>
+    </div>
+
+    <script>
+        function showMarketplace() {
+            document.getElementById('marketplace').style.display = 'block';
+            document.getElementById('workshop').style.display = 'none';
+            document.querySelectorAll('.nav-tab')[0].classList.add('active');
+            document.querySelectorAll('.nav-tab')[1].classList.remove('active');
+        }
+
+        function showWorkshop() {
+            document.getElementById('marketplace').style.display = 'none';
+            document.getElementById('workshop').style.display = 'block';
+            document.querySelectorAll('.nav-tab')[0].classList.remove('active');
+            document.querySelectorAll('.nav-tab')[1].classList.add('active');
+        }
+
+        function openModal(title, description, price) {
+            document.getElementById('modalTitle').textContent = title;
+            document.getElementById('modalDescription').textContent = description;
+            document.getElementById('modalPrice').textContent = price + ' ALGO';
+            document.getElementById('purchaseModal').classList.add('active');
+        }
+
+        function closeModal() {
+            document.getElementById('purchaseModal').classList.remove('active');
+        }
+
+        // Close modal when clicking outside
+        document.getElementById('purchaseModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeModal();
+            }
+        });
+
+        // Add some interactive effects
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add glitch effect to logo occasionally
+            setInterval(() => {
+                const logo = document.querySelector('.logo');
+                if (Math.random() < 0.1) {
+                    logo.style.textShadow = '2px 0 #ff00ff, -2px 0 #00ffff';
+                    setTimeout(() => {
+                        logo.style.textShadow = '0 0 20px #ff00ff';
+                    }, 100);
+                }
+            }, 2000);
+        });
+    </script>
+</body>
+</html>

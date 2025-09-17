@@ -1,128 +1,140 @@
-// src/components/Home.tsx
+import { useState, useEffect } from 'react'
 import { useWallet } from '@txnlab/use-wallet-react'
-import React, { useState } from 'react'
 import { useSnackbar } from 'notistack'
-import ConnectWallet from './components/ConnectWallet'
-import Transact from './components/Transact'
-import AppCalls from './components/AppCalls'
-import UploadForm from './components/UploadForm'
-import ContextCard from './components/ContextCard'
-import { getAlgodConfigFromViteEnvironment, getIndexerConfigFromViteEnvironment } from './utils/network/getAlgoClientConfigs'
 import { AlgorandClient } from '@algorandfoundation/algokit-utils'
 import algosdk from 'algosdk'
+import { Context7MarketplaceFactory } from './contracts/Context7Marketplace'
+import './styles/pixel-arcade.css'
 
-interface HomeProps {}
+import ConnectWallet from './components/ConnectWallet'
+import AppCalls from './components/AppCalls'
+import UploadForm from './components/UploadForm'
 
-const Home: React.FC<HomeProps> = () => {
-  const [openWalletModal, setOpenWalletModal] = useState<boolean>(false)
-  const [openDemoModal, setOpenDemoModal] = useState<boolean>(false)
-  const [appCallsDemoModal, setAppCallsDemoModal] = useState<boolean>(false)
-  const [openUploadModal, setOpenUploadModal] = useState<boolean>(false)
-  const [openMarketplaceModal, setOpenMarketplaceModal] = useState<boolean>(false)
-  const { activeAddress, transactionSigner } = useWallet()
+interface HomeProps {
+  openWalletModal: boolean
+  setOpenWalletModal: (open: boolean) => void
+  openDemoModal: () => void
+  setIsConnected: (isConnected: boolean) => void
+}
+
+export default function Home({ openWalletModal, setOpenWalletModal, openDemoModal, setIsConnected }: HomeProps) {
+  const { activeAddress } = useWallet()
   const { enqueueSnackbar } = useSnackbar()
+  const [currentView, setCurrentView] = useState<'marketplace' | 'workshop'>('marketplace')
+  const [openPurchaseModal, setOpenPurchaseModal] = useState(false)
+  const [selectedContext, setSelectedContext] = useState<any>(null)
+  const [openAppCallsModal, setOpenAppCallsModal] = useState(false)
+  const [contexts, setContexts] = useState<Array<{
+    id: string
+    name: string
+    description: string
+    price: number
+    seller: string
+    ipfsHash: string
+  }>>([])
 
-  // Demo data for ContextCard components
-  const demoContexts = [
-    {
-      sellerAddress: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567890ABCDEFGHIJKLMNOPQR',
-      price: 5.5
-    },
-    {
-      sellerAddress: 'ZYXWVUTSRQPONMLKJIHGFEDCBA098765432ZYXWVUTSRQPONMLKJ',
-      price: 12.0
-    },
-    {
-      sellerAddress: 'MNBVCXZASDFGHJKLPOIUYTREWQ135792468MNBVCXZASDFGHJKL',
-      price: 3.25
+  const algorand = AlgorandClient.testNet()
+
+  // Load contexts from deployed contract
+  const loadContexts = async () => {
+    if (!activeAddress) {
+      setContexts([])
+      return
     }
-  ]
 
-  // Initialize Algorand client
-  const algodConfig = getAlgodConfigFromViteEnvironment()
-  const indexerConfig = getIndexerConfigFromViteEnvironment()
-  const algorand = AlgorandClient.fromConfig({
-    algodConfig,
-    indexerConfig,
-  })
-  algorand.setDefaultSigner(transactionSigner)
+    try {
+      const factory = new Context7MarketplaceFactory({
+        defaultSender: activeAddress,
+        algorand,
+      })
+      
+      const appClient = await factory.getAppClientByCreatorAndName({
+        creatorAddress: activeAddress,
+        appName: 'Context7Marketplace',
+      })
 
-  const toggleWalletModal = () => {
-    setOpenWalletModal(!openWalletModal)
+      // TODO: Implement reading contexts from contract global state
+      // For now, start with empty array until contract is deployed and contexts are created
+      setContexts([])
+      
+    } catch (error) {
+      console.error('Error loading contexts:', error)
+      // If contract doesn't exist yet, show empty state
+      setContexts([])
+    }
   }
 
-  const toggleDemoModal = () => {
-    setOpenDemoModal(!openDemoModal)
-  }
-
-  const toggleAppCallsModal = () => {
-    setAppCallsDemoModal(!appCallsDemoModal)
-  }
-
-  const toggleUploadModal = () => {
-    setOpenUploadModal(!openUploadModal)
-  }
-
-  const toggleMarketplaceModal = () => {
-    setOpenMarketplaceModal(!openMarketplaceModal)
-  }
+  useEffect(() => {
+    loadContexts()
+  }, [activeAddress])
 
   // Handle Context7 marketplace context creation
   const handleCreateContext = async (ipfsHash: string, price: number) => {
     if (!activeAddress) {
-      enqueueSnackbar('Demo mode: Simulating context creation without wallet', { variant: 'info' })
+      enqueueSnackbar('Please connect your wallet first', { variant: 'error' })
+      return
     }
 
     try {
-      // Convert ALGO to microALGOs (1 ALGO = 1,000,000 microALGOs)
       const priceInMicroAlgos = Math.round(price * 1_000_000)
       
-      console.log('Creating context with:', {
-        ipfsHash,
-        priceInAlgo: price,
-        priceInMicroAlgos,
-        activeAddress
+      const factory = new Context7MarketplaceFactory({
+        defaultSender: activeAddress,
+        algorand,
+      })
+      
+      const appClient = await factory.getAppClientByCreatorAndName({
+        creatorAddress: activeAddress,
+        appName: 'Context7Marketplace',
       })
 
-      // Note: Since we don't have the generated client yet due to Beaker dependency issues,
-      // this is a placeholder implementation. Once the contract is properly built and 
-      // the client is generated, this would be replaced with:
-      
-      // const factory = new Context7MarketplaceFactory({
-      //   defaultSender: activeAddress,
-      //   algorand,
-      // })
-      
-      // const deployResult = await factory.deploy({
-      //   onSchemaBreak: OnSchemaBreak.AppendApp,
-      //   onUpdate: OnUpdate.AppendApp,
-      // })
-      
-      // const { appClient } = deployResult
-      
-      // await appClient.optIn.createContext({
-      //   args: {
-      //     ipfsCid: ipfsHash,
-      //     price: priceInMicroAlgos
-      //   }
-      // })
+      await appClient.send.createContext({
+        args: { ipfsHash, price: BigInt(priceInMicroAlgos) }
+      })
 
-      // For now, we'll simulate the success
       enqueueSnackbar(`Context listed successfully! IPFS: ${ipfsHash.substring(0, 10)}... Price: ${price} ALGO`, { 
         variant: 'success' 
       })
       
-      console.log('Context creation result:', {
-        success: true,
-        ipfsHash,
-        price: priceInMicroAlgos,
-        timestamp: new Date().toISOString()
-      })
-
-      setOpenUploadModal(false)
-      
+      await loadContexts()
     } catch (error) {
       console.error('Error creating context:', error)
+      
+      if (error instanceof Error && error.message.includes('has not opted in')) {
+        try {
+          enqueueSnackbar('First-time setup: Opting into marketplace...', { variant: 'info' })
+          
+          const factory2 = new Context7MarketplaceFactory({
+            defaultSender: activeAddress,
+            algorand,
+          })
+          
+          const appClient2 = await factory2.getAppClientByCreatorAndName({
+            creatorAddress: activeAddress,
+            appName: 'Context7Marketplace',
+          })
+          
+          await appClient2.send.optIn.bare()
+          
+          await appClient2.send.createContext({
+            args: { ipfsHash, price: BigInt(Math.round(price * 1_000_000)) }
+          })
+          
+          enqueueSnackbar(`Context listed successfully! IPFS: ${ipfsHash.substring(0, 10)}... Price: ${price} ALGO`, { 
+            variant: 'success' 
+          })
+          
+          await loadContexts()
+          return
+        } catch (optInError) {
+          console.error('Error during opt-in and retry:', optInError)
+          enqueueSnackbar('Failed to set up marketplace access. Please try again.', { 
+            variant: 'error' 
+          })
+          return
+        }
+      }
+      
       enqueueSnackbar(`Error creating context: ${error instanceof Error ? error.message : 'Unknown error'}`, { 
         variant: 'error' 
       })
@@ -132,75 +144,41 @@ const Home: React.FC<HomeProps> = () => {
   // Handle Context7 marketplace context purchase
   const handlePurchase = async (sellerAddress: string, price: number) => {
     if (!activeAddress) {
-      enqueueSnackbar('Demo mode: Simulating context purchase without wallet', { variant: 'info' })
+      enqueueSnackbar('Please connect your wallet first', { variant: 'error' })
+      return
     }
 
     try {
-      // Convert ALGO to microALGOs (price is already in ALGO from ContextCard)
       const priceInMicroAlgos = Math.round(price * 1_000_000)
       
-      console.log('Purchasing context with:', {
-        sellerAddress,
-        priceInAlgo: price,
-        priceInMicroAlgos,
-        buyer: activeAddress
+      const factory = new Context7MarketplaceFactory({
+        defaultSender: activeAddress,
+        algorand,
+      })
+      
+      const appClient = await factory.getAppClientByCreatorAndName({
+        creatorAddress: activeAddress,
+        appName: 'Context7Marketplace',
       })
 
-      // Get suggested transaction parameters
       const suggestedParams = await algorand.client.algod.getTransactionParams().do()
-      
-      // Note: We need the application address - this would typically come from the deployed contract
-      // For now, using a placeholder address that would be replaced with the actual app address
-      const applicationAddress = 'PLACEHOLDER_APP_ADDRESS' // This should be the deployed contract address
-      
-      // Create payment transaction from buyer to application
       const paymentTxn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
-        sender: activeAddress || 'DEMO_ADDRESS',
-        receiver: applicationAddress,
+        sender: activeAddress,
+        receiver: appClient.appAddress,
         amount: priceInMicroAlgos,
         suggestedParams,
-        note: new Uint8Array(Buffer.from(`Context purchase from ${sellerAddress}`))
       })
 
-      console.log('Payment transaction created:', {
-        from: activeAddress,
-        to: applicationAddress,
-        amount: priceInMicroAlgos,
-        txnId: paymentTxn.txID()
+      await appClient.send.purchaseContext({
+        args: { 
+          seller: sellerAddress, 
+          payment: paymentTxn 
+        }
       })
 
-      // Note: Since we don't have the generated client yet due to Beaker dependency issues,
-      // this is a placeholder implementation. Once the contract is properly built and 
-      // the client is generated, this would be replaced with:
-      
-      // const factory = new Context7MarketplaceFactory({
-      //   defaultSender: activeAddress,
-      //   algorand,
-      // })
-      
-      // const appClient = factory.getAppClientById({ appId: APP_ID })
-      
-      // await appClient.send.purchaseContext({
-      //   args: {
-      //     payment: paymentTxn,
-      //     seller: { address: sellerAddress }
-      //   }
-      // })
-
-      // For now, we'll simulate the success
-      enqueueSnackbar(`Context purchased successfully! Seller: ${sellerAddress.substring(0, 10)}... Price: ${price} ALGO`, { 
+      enqueueSnackbar(`Context purchased from ${sellerAddress.substring(0, 10)}... for ${price} ALGO`, { 
         variant: 'success' 
       })
-      
-      console.log('Context purchase result:', {
-        success: true,
-        sellerAddress,
-        price: priceInMicroAlgos,
-        buyer: activeAddress,
-        paymentTxnId: paymentTxn.txID(),
-        timestamp: new Date().toISOString()
-      })
-      
     } catch (error) {
       console.error('Error purchasing context:', error)
       enqueueSnackbar(`Error purchasing context: ${error instanceof Error ? error.message : 'Unknown error'}`, { 
@@ -210,98 +188,154 @@ const Home: React.FC<HomeProps> = () => {
   }
 
   return (
-    <div className="hero min-h-screen bg-teal-400">
-      <div className="hero-content text-center rounded-lg p-6 max-w-md bg-white mx-auto">
-        <div className="max-w-md">
-          <h1 className="text-4xl">
-            Welcome to <div className="font-bold">AlgoKit 🙂</div>
-          </h1>
-          <p className="py-6">
-            This starter has been generated using official AlgoKit React template. Refer to the resource below for next steps.
-          </p>
+    <div className="min-h-screen">
+      {/* Retro scanline effect */}
+      <div className="scanline"></div>
+      
+      {/* Header */}
+      <header className="header">
+        <div className="logo">CONTEXT7</div>
+        <div>
+          {activeAddress ? (
+            <span className="connect-wallet connected-wallet">
+              {activeAddress.substring(0, 8)}...
+            </span>
+          ) : (
+            <button className="connect-wallet neon-glow" onClick={() => setOpenWalletModal(true)}>
+              CONNECT WALLET
+            </button>
+          )}
+          <button className="deploy-btn neon-glow" onClick={() => setOpenAppCallsModal(true)}>
+            DEPLOY CONTRACT
+          </button>
+        </div>
+      </header>
 
-          <div className="grid">
-            <a
-              data-test-id="getting-started"
-              className="btn btn-primary m-2"
-              target="_blank"
-              rel="noopener noreferrer"
-              href="https://github.com/algorandfoundation/algokit-cli"
+      {/* Navigation Tabs */}
+      <div className="nav-tabs">
+        <button 
+          className={`nav-tab ${currentView === 'marketplace' ? 'active' : ''}`} 
+          onClick={() => setCurrentView('marketplace')}
+        >
+          MARKETPLACE
+        </button>
+        <button 
+          className={`nav-tab ${currentView === 'workshop' ? 'active' : ''}`} 
+          onClick={() => setCurrentView('workshop')}
+        >
+          DEVELOPER WORKSHOP
+        </button>
+      </div>
+
+      {/* Main Marketplace View */}
+      {currentView === 'marketplace' && (
+        <main className="marketplace">
+          <h1 className="section-title">AI CARTRIDGES ARCADE</h1>
+          
+          <div className="cartridges-grid">
+            {contexts.length > 0 ? (
+              contexts.map((context) => (
+                <div 
+                  key={context.id} 
+                  className="cartridge pixel-border" 
+                  onClick={() => {
+                    setSelectedContext(context)
+                    setOpenPurchaseModal(true)
+                  }}
+                >
+                  <div className="cartridge-art"></div>
+                  <div className="cartridge-info">
+                    <div className="developer-avatar"></div>
+                    <span className="developer-name">@{context.seller.substring(0, 8)}...</span>
+                  </div>
+                  <div className="cartridge-name">{context.name}</div>
+                  <div className="cartridge-price">{context.price} ALGO</div>
+                </div>
+              ))
+            ) : (
+              <div className="empty-state">
+                <div className="empty-message">
+                  <h3>NO CARTRIDGES FOUND</h3>
+                  <p>Deploy the contract and create your first AI cartridge to get started!</p>
+                </div>
+              </div>
+            )}
+          </div>
+        </main>
+      )}
+
+      {/* Developer Workshop View */}
+      {currentView === 'workshop' && (
+        <div className="workshop">
+          <h1 className="section-title">DEVELOPER WORKSHOP</h1>
+          
+          <div className="workshop-form pixel-border">
+            <h2 style={{color: '#ff00ff', marginBottom: '30px', fontSize: '16px'}}>CREATE NEW AI CARTRIDGE</h2>
+            
+            <UploadForm onSubmit={handleCreateContext} />
+          </div>
+          
+          <div className="my-cartridges pixel-border">
+            <h3 style={{color: '#00ffff', marginBottom: '20px', fontSize: '14px'}}>MY CARTRIDGES</h3>
+            
+            <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px'}}>
+              {contexts.filter(c => c.seller === activeAddress).map((context) => (
+                <div key={context.id} className="cartridge" style={{margin: 0}}>
+                  <div className="cartridge-art" style={{height: '80px', background: 'linear-gradient(45deg, #ff00ff, #00ffff)'}}></div>
+                  <div className="cartridge-name" style={{fontSize: '10px'}}>{context.name}</div>
+                  <div className="cartridge-price" style={{fontSize: '12px'}}>{context.price} ALGO</div>
+                </div>
+              ))}
+              
+              {contexts.filter(c => c.seller === activeAddress).length === 0 && (
+                <div style={{color: '#00ffff', fontSize: '12px', textAlign: 'center', gridColumn: '1 / -1'}}>
+                  No cartridges created yet. Use the form above to create your first AI cartridge!
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Purchase Modal */}
+      {openPurchaseModal && selectedContext && (
+        <div className="modal" onClick={() => setOpenPurchaseModal(false)}>
+          <div className="modal-content pixel-border" onClick={(e) => e.stopPropagation()}>
+            <button className="close-modal" onClick={() => setOpenPurchaseModal(false)}>&times;</button>
+            
+            <div className="modal-art" style={{
+              background: `linear-gradient(45deg, #${Math.floor(Math.random()*16777215).toString(16)}, #${Math.floor(Math.random()*16777215).toString(16)})`
+            }}></div>
+            
+            <h2 style={{color: '#ff00ff', marginBottom: '20px', fontSize: '16px'}}>
+              {selectedContext.name}
+            </h2>
+            
+            <div className="terminal-description">
+              {selectedContext.description}
+            </div>
+            
+            <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '20px 0'}}>
+              <span style={{color: '#00ffff', fontSize: '12px'}}>DEVELOPER: @{selectedContext.seller}</span>
+              <span style={{color: '#00ff41', fontSize: '16px'}}>{selectedContext.price} ALGO</span>
+            </div>
+            
+            <button 
+              className="insert-coin-btn neon-glow"
+              onClick={() => {
+                handlePurchase(selectedContext.seller, selectedContext.price)
+                setOpenPurchaseModal(false)
+              }}
             >
-              Getting started
-            </a>
-
-            <div className="divider" />
-            <button data-test-id="connect-wallet" className="btn m-2" onClick={toggleWalletModal}>
-              Wallet Connection
-            </button>
-
-            {activeAddress && (
-              <button data-test-id="transactions-demo" className="btn m-2" onClick={toggleDemoModal}>
-                Transactions Demo
-              </button>
-            )}
-
-            {activeAddress && (
-              <button data-test-id="appcalls-demo" className="btn m-2" onClick={toggleAppCallsModal}>
-                Contract Interactions Demo
-              </button>
-            )}
-
-            <button data-test-id="upload-context" className="btn btn-secondary m-2" onClick={toggleUploadModal}>
-              List AI Context {!activeAddress && '(Demo)'}
-            </button>
-
-            <button data-test-id="marketplace" className="btn btn-accent m-2" onClick={toggleMarketplaceModal}>
-              Browse Marketplace {!activeAddress && '(Demo)'}
+              INSERT COIN
             </button>
           </div>
-
-          <ConnectWallet openModal={openWalletModal} closeModal={toggleWalletModal} />
-          <Transact openModal={openDemoModal} setModalState={setOpenDemoModal} />
-          <AppCalls openModal={appCallsDemoModal} setModalState={setAppCallsDemoModal} />
-          
-          {/* Context Upload Modal */}
-          <dialog id="upload_context_modal" className={`modal ${openUploadModal ? 'modal-open' : ''}`}>
-            <div className="modal-box">
-              <h3 className="font-bold text-lg mb-4">List AI Context for Sale</h3>
-              <UploadForm onSubmit={handleCreateContext} />
-              <div className="modal-action">
-                <button className="btn" onClick={toggleUploadModal}>
-                  Close
-                </button>
-              </div>
-            </div>
-          </dialog>
-
-          {/* Marketplace Modal */}
-          <dialog id="marketplace_modal" className={`modal ${openMarketplaceModal ? 'modal-open' : ''}`}>
-            <div className="modal-box max-w-4xl">
-              <h3 className="font-bold text-lg mb-4">Context7 Marketplace</h3>
-              <p className="text-sm text-gray-600 mb-6">Browse and purchase AI contexts from other developers</p>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {demoContexts.map((context, index) => (
-                  <ContextCard
-                    key={index}
-                    sellerAddress={context.sellerAddress}
-                    price={context.price}
-                    onPurchase={handlePurchase}
-                  />
-                ))}
-              </div>
-              
-              <div className="modal-action">
-                <button className="btn" onClick={toggleMarketplaceModal}>
-                  Close
-                </button>
-              </div>
-            </div>
-          </dialog>
         </div>
-      </div>
+      )}
+
+      {/* Modals */}
+      <ConnectWallet openModal={openWalletModal} closeModal={() => setOpenWalletModal(false)} />
+      <AppCalls openModal={openAppCallsModal} setModalState={setOpenAppCallsModal} />
     </div>
   )
 }
-
-export default Home

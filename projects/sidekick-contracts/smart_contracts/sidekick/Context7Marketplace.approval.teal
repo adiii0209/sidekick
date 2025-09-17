@@ -1,0 +1,274 @@
+#pragma version 10
+#pragma typetrack false
+
+// smart_contracts.sidekick.context_marketplace.Context7Marketplace.__algopy_entrypoint_with_init() -> uint64:
+main:
+    intcblock 1 0
+    bytecblock "ipfs_hash" "price"
+    // smart_contracts/sidekick/context_marketplace.py:4
+    // class Context7Marketplace(ARC4Contract):
+    txn NumAppArgs
+    bz main_bare_routing@7
+    pushbytess 0xe1add49f 0x680ffab3 // method "create_context(string,uint64)void", method "purchase_context(account,pay)string"
+    txna ApplicationArgs 0
+    match main_create_context_route@5 main_purchase_context_route@6
+
+main_after_if_else@10:
+    // smart_contracts/sidekick/context_marketplace.py:4
+    // class Context7Marketplace(ARC4Contract):
+    intc_1 // 0
+    return
+
+main_purchase_context_route@6:
+    // smart_contracts/sidekick/context_marketplace.py:29
+    // @arc4.abimethod
+    txn OnCompletion
+    !
+    assert // OnCompletion is not NoOp
+    txn ApplicationID
+    assert // can only call when not creating
+    // smart_contracts/sidekick/context_marketplace.py:4
+    // class Context7Marketplace(ARC4Contract):
+    txna ApplicationArgs 1
+    btoi
+    txnas Accounts
+    txn GroupIndex
+    intc_0 // 1
+    -
+    dup
+    gtxns TypeEnum
+    intc_0 // pay
+    ==
+    assert // transaction type is pay
+    // smart_contracts/sidekick/context_marketplace.py:29
+    // @arc4.abimethod
+    callsub purchase_context
+    pushbytes 0x151f7c75
+    swap
+    concat
+    log
+    intc_0 // 1
+    return
+
+main_create_context_route@5:
+    // smart_contracts/sidekick/context_marketplace.py:18
+    // @arc4.abimethod
+    txn OnCompletion
+    !
+    assert // OnCompletion is not NoOp
+    txn ApplicationID
+    assert // can only call when not creating
+    // smart_contracts/sidekick/context_marketplace.py:4
+    // class Context7Marketplace(ARC4Contract):
+    txna ApplicationArgs 1
+    txna ApplicationArgs 2
+    // smart_contracts/sidekick/context_marketplace.py:18
+    // @arc4.abimethod
+    callsub create_context
+    intc_0 // 1
+    return
+
+main_bare_routing@7:
+    // smart_contracts/sidekick/context_marketplace.py:4
+    // class Context7Marketplace(ARC4Contract):
+    txn OnCompletion
+    switch main___algopy_default_create@9 main_opt_in@8
+    b main_after_if_else@10
+
+main_opt_in@8:
+    // smart_contracts/sidekick/context_marketplace.py:13
+    // @arc4.baremethod(allow_actions=["OptIn"])
+    txn ApplicationID
+    assert // can only call when not creating
+    intc_0 // 1
+    return
+
+main___algopy_default_create@9:
+    txn ApplicationID
+    !
+    assert // can only call when creating
+    intc_0 // 1
+    return
+
+
+// smart_contracts.sidekick.context_marketplace.Context7Marketplace.create_context(ipfs_hash: bytes, price: bytes) -> void:
+create_context:
+    // smart_contracts/sidekick/context_marketplace.py:18-19
+    // @arc4.abimethod
+    // def create_context(self, ipfs_hash: arc4.String, price: arc4.UInt64) -> None:
+    proto 2 0
+    // smart_contracts/sidekick/context_marketplace.py:21-22
+    // # Ensure price is greater than 0
+    // assert price.native > 0, "Price must be greater than 0"
+    frame_dig -1
+    btoi
+    dup
+    assert // Price must be greater than 0
+    // smart_contracts/sidekick/context_marketplace.py:24-25
+    // # Store context info in local state
+    // self.ipfs_hash[Txn.sender] = ipfs_hash.native.bytes
+    frame_dig -2
+    extract 2 0
+    txn Sender
+    bytec_0 // "ipfs_hash"
+    uncover 2
+    app_local_put
+    // smart_contracts/sidekick/context_marketplace.py:26
+    // self.price[Txn.sender] = price.native
+    txn Sender
+    bytec_1 // "price"
+    uncover 2
+    app_local_put
+    // smart_contracts/sidekick/context_marketplace.py:27
+    // self.seller[Txn.sender] = Txn.sender
+    txn Sender
+    pushbytes "seller"
+    txn Sender
+    app_local_put
+    retsub
+
+
+// smart_contracts.sidekick.context_marketplace.Context7Marketplace.purchase_context(seller: bytes, payment: uint64) -> bytes:
+purchase_context:
+    // smart_contracts/sidekick/context_marketplace.py:29-30
+    // @arc4.abimethod
+    // def purchase_context(self, seller: Account, payment: gtxn.PaymentTransaction) -> arc4.String:
+    proto 2 1
+    // smart_contracts/sidekick/context_marketplace.py:36-37
+    // # Get the price from seller's local state
+    // price = self.price[seller]
+    frame_dig -2
+    intc_1 // 0
+    bytec_1 // "price"
+    app_local_get_ex
+    assert // check self.price exists for account
+    // smart_contracts/sidekick/context_marketplace.py:39-40
+    // # Verify payment transaction
+    // assert payment.receiver == Global.current_application_address
+    frame_dig -1
+    gtxns Receiver
+    global CurrentApplicationAddress
+    ==
+    assert
+    // smart_contracts/sidekick/context_marketplace.py:41
+    // assert payment.amount == price
+    frame_dig -1
+    gtxns Amount
+    dig 1
+    ==
+    assert
+    // smart_contracts/sidekick/context_marketplace.py:42
+    // assert payment.sender == Txn.sender
+    frame_dig -1
+    gtxns Sender
+    txn Sender
+    ==
+    assert
+    // smart_contracts/sidekick/context_marketplace.py:44-45
+    // # Calculate fees (90% seller, 5% platform, 5% developer)
+    // platform_fee = price * 5 // 100
+    dup
+    pushint 5 // 5
+    *
+    pushint 100 // 100
+    /
+    // smart_contracts/sidekick/context_marketplace.py:47
+    // seller_proceeds = price - platform_fee - developer_fee
+    swap
+    dig 1
+    -
+    dig 1
+    -
+    // smart_contracts/sidekick/context_marketplace.py:49-54
+    // # Send payments via inner transactions
+    // itxn.Payment(
+    //     receiver=seller,
+    //     amount=seller_proceeds,
+    //     fee=0,
+    // ).submit()
+    itxn_begin
+    itxn_field Amount
+    frame_dig -2
+    itxn_field Receiver
+    // smart_contracts/sidekick/context_marketplace.py:49-50
+    // # Send payments via inner transactions
+    // itxn.Payment(
+    intc_0 // pay
+    itxn_field TypeEnum
+    // smart_contracts/sidekick/context_marketplace.py:53
+    // fee=0,
+    intc_1 // 0
+    itxn_field Fee
+    // smart_contracts/sidekick/context_marketplace.py:49-54
+    // # Send payments via inner transactions
+    // itxn.Payment(
+    //     receiver=seller,
+    //     amount=seller_proceeds,
+    //     fee=0,
+    // ).submit()
+    itxn_submit
+    // smart_contracts/sidekick/context_marketplace.py:56-60
+    // itxn.Payment(
+    //     receiver=platform_fee_address,
+    //     amount=platform_fee,
+    //     fee=0,
+    // ).submit()
+    itxn_begin
+    dup
+    itxn_field Amount
+    // smart_contracts/sidekick/context_marketplace.py:32-33
+    // # Platform and developer fee addresses (TestNet)
+    // platform_fee_address = Account("7ZUECA7HFLZTXENRV24SHLU4AVPUTMTTDUFUBNBD64C73F3UHRTHAIOF6Q")
+    pushbytes base32(7ZUECA7HFLZTXENRV24SHLU4AVPUTMTTDUFUBNBD64C73F3UHRTA) // addr 7ZUECA7HFLZTXENRV24SHLU4AVPUTMTTDUFUBNBD64C73F3UHRTHAIOF6Q
+    itxn_field Receiver
+    // smart_contracts/sidekick/context_marketplace.py:56
+    // itxn.Payment(
+    intc_0 // pay
+    itxn_field TypeEnum
+    // smart_contracts/sidekick/context_marketplace.py:59
+    // fee=0,
+    intc_1 // 0
+    itxn_field Fee
+    // smart_contracts/sidekick/context_marketplace.py:56-60
+    // itxn.Payment(
+    //     receiver=platform_fee_address,
+    //     amount=platform_fee,
+    //     fee=0,
+    // ).submit()
+    itxn_submit
+    // smart_contracts/sidekick/context_marketplace.py:62-66
+    // itxn.Payment(
+    //     receiver=developer_fee_address,
+    //     amount=developer_fee,
+    //     fee=0,
+    // ).submit()
+    itxn_begin
+    itxn_field Amount
+    // smart_contracts/sidekick/context_marketplace.py:34
+    // developer_fee_address = Account("GD64YIY3TWGDMCNPP553DZPPR6LDUSFQOIJVFDPPXWEG3FVOJCCDBBHU5A")
+    pushbytes base32(GD64YIY3TWGDMCNPP553DZPPR6LDUSFQOIJVFDPPXWEG3FVOJCCA) // addr GD64YIY3TWGDMCNPP553DZPPR6LDUSFQOIJVFDPPXWEG3FVOJCCDBBHU5A
+    itxn_field Receiver
+    // smart_contracts/sidekick/context_marketplace.py:62
+    // itxn.Payment(
+    intc_0 // pay
+    itxn_field TypeEnum
+    // smart_contracts/sidekick/context_marketplace.py:65
+    // fee=0,
+    intc_1 // 0
+    itxn_field Fee
+    // smart_contracts/sidekick/context_marketplace.py:62-66
+    // itxn.Payment(
+    //     receiver=developer_fee_address,
+    //     amount=developer_fee,
+    //     fee=0,
+    // ).submit()
+    itxn_submit
+    // smart_contracts/sidekick/context_marketplace.py:68-69
+    // # Return the IPFS hash to the buyer
+    // return arc4.String.from_bytes(self.ipfs_hash[seller])
+    frame_dig -2
+    intc_1 // 0
+    bytec_0 // "ipfs_hash"
+    app_local_get_ex
+    assert // check self.ipfs_hash exists for account
+    retsub
